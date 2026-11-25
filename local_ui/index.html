@@ -15,11 +15,18 @@
   <header class="topbar">
     <div class="brand"><span class="book-mark" aria-hidden="true"></span><span>iCourse</span><span class="brand-divider"></span><span class="brand-caption">本地课程笔记</span></div>
     <div class="actions">
+      <button type="button" id="edit-models">API 设置</button>
       <button type="button" id="edit-subs">管理订阅</button>
-      <button type="button" class="primary" id="sync" disabled>立即同步</button>
+      <button type="button" id="open-pending" hidden>待选课次</button>
+      <button type="button" class="primary" id="sync" disabled>检查新课次</button>
     </div>
   </header>
   <div class="status-strip" role="status"><span class="status-light" aria-hidden="true"></span><span id="status">正在连接本地服务…</span></div>
+  <section id="job" class="job" aria-label="任务进度" hidden>
+    <div class="job-row"><strong id="job-title"></strong><span id="job-count"></span></div>
+    <progress id="job-progress" aria-label="任务完成进度"></progress>
+    <div class="job-row"><span id="job-detail" role="status"></span><button type="button" id="job-read" hidden>阅读笔记</button></div>
+  </section>
   <div class="workspace">
     <aside aria-label="课程与课次">
       <div class="section-label"><label for="courses">我的课程</label><span id="course-count"></span></div>
@@ -57,6 +64,33 @@
       <textarea id="ids" rows="5" spellcheck="false" aria-describedby="ids-hint" placeholder="每行一个课程 ID"></textarea>
       <p id="form-status" role="status"></p>
       <div class="dialog-actions"><button id="cancel" type="button">取消</button><button class="primary" id="save" type="submit">保存订阅</button></div>
+    </form>
+  </dialog>
+  <dialog id="pending-dialog" class="wide-dialog" aria-labelledby="pending-title">
+    <div class="dialog-head"><h2 id="pending-title">选择要解析的课次</h2><button type="button" class="close" data-close="pending-dialog" aria-label="关闭待选课次">×</button></div>
+    <div class="selection-tools"><span id="pending-count">正在读取课次…</span><button type="button" id="pick-all">全选</button><button type="button" id="pick-none">清空选择</button></div>
+    <div id="pending-list" class="pending-list" aria-label="待解析课次"></div>
+    <div class="model-choice">
+      <div class="section-label"><label for="parse-profile">摘要 API</label><button class="text-button" id="configure-profile" type="button">管理 API</button></div>
+      <select id="parse-profile"></select>
+      <p id="parse-model-hint" class="input-hint"></p>
+    </div>
+    <p id="pending-message" class="feedback" role="status"></p>
+    <div class="dialog-actions"><button type="button" data-close="pending-dialog">取消</button><button id="parse-selected" class="primary" type="button" disabled>解析所选 0 节</button></div>
+  </dialog>
+  <dialog id="profiles-dialog" class="settings-dialog" aria-labelledby="profiles-title">
+    <div class="dialog-head"><h2 id="profiles-title">摘要 API 设置</h2><button type="button" class="close" data-close="profiles-dialog" aria-label="关闭 API 设置">×</button></div>
+    <div class="section-label"><label for="profiles">已保存的配置</label><button class="text-button" id="new-profile" type="button">新增配置</button></div>
+    <select id="profiles"></select>
+    <form id="profile-form" class="profile-form">
+      <label for="profile-preset">供应商预设</label><select id="profile-preset"></select>
+      <label for="profile-name">配置名称</label><input id="profile-name" placeholder="例如：日常课程笔记" required>
+      <label for="profile-url">API 地址</label><input id="profile-url" type="url" placeholder="https://…/v1" required spellcheck="false">
+      <label for="profile-model">摘要模型</label><input id="profile-model" placeholder="填写供应商提供的模型 ID" required spellcheck="false">
+      <label for="profile-key">API 密钥</label><input id="profile-key" type="password" autocomplete="new-password" spellcheck="false" aria-describedby="key-hint">
+      <p id="key-hint" class="input-hint"></p>
+      <p id="profile-message" class="feedback" role="status"></p>
+      <div class="dialog-actions"><button id="delete-profile" type="button" hidden>删除配置</button><button id="use-profile" type="button" hidden>设为所用 API</button><button type="button" data-close="profiles-dialog">关闭</button><button class="primary" id="save-profile" type="submit">保存配置</button></div>
     </form>
   </dialog>
 </body>

@@ -16,8 +16,9 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import quote, unquote, urlsplit
 
+from src.runtime.local_providers import LocalProviders
 from src.runtime.local_store import ROOT, LocalStore, lecture_markdown, read_environment
-from src.runtime.local_sync import SyncBusy, start_sync, status, worker
+from src.runtime.local_sync import SyncBusy, current_plan, start_sync, status, worker
 
 
 class LocalHandler(BaseHTTPRequestHandler):
@@ -74,6 +75,10 @@ class LocalHandler(BaseHTTPRequestHandler):
     def get_route(self, path):
         if path == "/api/status":
             self.reply(200, status(self.store))
+        elif path == "/api/plan":
+            self.reply(200, current_plan(self.store))
+        elif path == "/api/providers":
+            self.reply(200, LocalProviders(self.store).list(read_environment(strict=False)))
         elif path == "/api/subscriptions":
             self.reply(200, {"course_ids": self.store.subscriptions(read_environment(strict=False))})
         elif path == "/api/library":
@@ -97,14 +102,15 @@ class LocalHandler(BaseHTTPRequestHandler):
             self.reply(200, asset.read_bytes(), mime)
 
     def post_route(self, path):
-        if path not in ("/api/subscriptions", "/api/sync"):
+        if path not in ("/api/subscriptions", "/api/sync", "/api/discover", "/api/process",
+                        "/api/providers", "/api/providers/select", "/api/providers/delete"):
             self.reply(404, {"error": "操作不存在。"})
             return
         if self.headers.get_content_type() != "application/json":
             self.reply(415, {"error": "需要 JSON 请求。"})
             return
         size = int(self.headers.get("Content-Length", 0))
-        if not 0 < size <= 65536:
+        if not 0 < size <= 1024 * 1024:
             self.reply(400, {"error": "请求大小无效。"})
             return
         body = json.loads(self.rfile.read(size))
@@ -112,8 +118,19 @@ class LocalHandler(BaseHTTPRequestHandler):
             raise ValueError("请求应为 JSON 对象。")
         if path == "/api/subscriptions":
             self.reply(200, self.store.save_subscriptions(body.get("course_ids")))
+        elif path.startswith("/api/providers"):
+            providers = LocalProviders(self.store)
+            env = read_environment(strict=False)
+            if path == "/api/providers":
+                result = providers.save(body, env)
+            elif path == "/api/providers/select":
+                result = providers.select(body.get("id"), env)
+            else:
+                result = providers.delete(body.get("id"), env)
+            self.reply(200, result)
         else:
-            process, state = start_sync(self.store, background=True)
+            process, state = start_sync(self.store, background=True,
+                                        selection=body if path == "/api/process" else None)
             if process:
                 threading.Thread(target=process.wait, daemon=True).start()
             self.reply(202 if process else 200, state)
@@ -154,8 +171,8 @@ def serve(store: LocalStore, port: int | None, browser: bool) -> int:
 
 def main() -> int:
     os.umask(0o077)
-    if len(sys.argv) == 3 and sys.argv[1] == "_worker":
-        return worker(sys.argv[2])
+    if sys.argv[1:] == ["_worker"]:
+        return worker()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", nargs="?", choices=["serve", "sync"], default="serve")
     parser.add_argument("--no-browser", action="store_true", help="仅启动服务")

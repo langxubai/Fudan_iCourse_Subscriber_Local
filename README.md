@@ -19,9 +19,9 @@ bash scripts/setup_local.sh
 | `StuId`、`UISPsw` | 复旦学号和 UIS 密码，变量名区分大小写 |
 | `UIS_TOTP_SECRET` | UIS 动态口令绑定时取得的 Base32 密钥，六位验证码会由程序在登录时生成 |
 | `COURSE_IDS` | 可选的初始订阅，填写课程网址中的数字，多个用英文逗号分隔。也可以打开网页后添加 |
-| 模型服务密钥 | 按使用的服务填写 `DASHSCOPE_API_KEY`（ModelScope）、`DEEPSEEK_API_KEY` 或 `GEMINI_API_KEY` 中的至少一项 |
+| 模型服务密钥 | 可选。可填写 `DASHSCOPE_API_KEY`（ModelScope）、`DEEPSEEK_API_KEY` 或 `GEMINI_API_KEY`，也可以稍后在网页里添加 |
 
-也可以自行指定供应商，同时填写 `LLM_BASE_URL`（供应商给出的 API 基础地址，通常以 `/v1` 结尾）、`LLM_MODEL`（模型 ID）和 `LLM_API_KEY`。这时只向指定地址发送摘要请求，接口需兼容 OpenAI Chat Completions。账号和密钥由本机后台读取。保存这些配置后可直接在网页重新同步。
+已有的 `LLM_BASE_URL`、`LLM_MODEL` 和 `LLM_API_KEY` 组合也会出现在网页的 API 列表里。接口需兼容 OpenAI Chat Completions。
 
 在 Finder 中双击 `打开课程库.command`，或在终端运行：
 
@@ -29,9 +29,14 @@ bash scripts/setup_local.sh
 .venv/bin/python local_app.py
 ```
 
-浏览器会打开本地课程库，优先使用 `http://127.0.0.1:8765/`。如果该端口正忙，程序会自动选择可用端口并在终端显示网址。保存订阅后，点击同步即可在 Mac 上处理课次。首次同步会处理所选课程已有的录播，后续同步只处理新课次和待重试的课次。音频识别和 PPT 文字识别在本机执行，生成摘要时会将转写和提取的 PPT 文字发给配置的模型服务。课程材料仅供个人学习使用。
+浏览器会打开本地课程库，优先使用 `http://127.0.0.1:8765/`。如果该端口正忙，程序会自动选择可用端口并在终端显示网址。
 
-课程数据默认保存在 `data/icourse.db`，同步日志在 `data/sync.log`。网页保存的订阅在 `data/subscriptions.json`，之后以这份清单为准。启动时如需自己打开浏览器，使用 `.venv/bin/python local_app.py --no-browser`。端口被占用时可以加 `--port 8766`。只同步一次可以直接运行下面的命令，完成后退出。
+1. 在「管理订阅」保存课程 ID，点击「检查新课次」。程序只从 iCourse 读取录播列表，并与本机笔记比对。这一步无需模型密钥。
+2. 在待选清单中按课程或逐节勾选，默认选中 0 节。可以随时关闭清单，之后从「待选课次」继续选择。
+3. 选择本次的摘要 API。要添加其他账号或模型，打开「API 设置」，分别填写名称、接口地址、模型 ID 和密钥。网页添加的配置保存在本机的 `data/providers.json`，已保存的密钥不会回显。
+4. 点击「解析所选 N 节」后，Mac 才开始处理这些录播，并把转录和识别出的 PPT 文字发给选定的模型。每批只使用确认的这项 API。页面显示当前课程、课次、处理阶段和已处理数，刷新后可继续查看。未勾选或处理失败的课次可以稍后再选。课程材料仅供个人学习使用。
+
+课程数据默认保存在 `data/icourse.db`，运行日志在 `data/sync.log`。网页保存的订阅在 `data/subscriptions.json`，之后以这份清单为准。启动时如需自己打开浏览器，使用 `.venv/bin/python local_app.py --no-browser`。可用 `--port 8766` 指定端口。下面的命令只更新待选清单便退出。打开网页并确认课次后才会解析。
 
 ```sh
 .venv/bin/python local_app.py sync
@@ -39,7 +44,7 @@ bash scripts/setup_local.sh
 
 ### 可选的 macOS 定时同步
 
-如果希望每天自动检查课程，先确认手动同步能成功，再在项目根目录运行以下命令。它们会为当前 macOS 用户注册一个任务，在本地时间 19:36 执行同步。定时运行时可以关闭课程网页。
+如果希望每天自动检查课程，先确认手动检查能成功，再在项目根目录运行以下命令。它们会为当前 macOS 用户注册一个任务，在本地时间 19:36 更新待选清单。定时检查可以在网页关闭时运行，解析仍需在网页中手动确认。
 
 ```sh
 mkdir -p "$HOME/Library/LaunchAgents" data

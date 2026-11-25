@@ -194,10 +194,12 @@ class Transcriber:
 
     def __init__(self, backend: Optional[str] = None,
                  model_dir: Optional[str] = None,
-                 num_threads: Optional[int] = None):
+                 num_threads: Optional[int] = None,
+                 *, on_audio_progress: Optional[Callable[[float], None]] = None):
         self._backend = (backend or config.ASR_BACKEND).lower()
         self._model_dir = model_dir or config.ASR_MODEL_DIR
         self._num_threads = num_threads or config.ASR_NUM_THREADS
+        self._on_audio_progress = on_audio_progress
         self._recognizer = None
         self._vad = None
         self._vad_config = None
@@ -417,6 +419,8 @@ class Transcriber:
                     f" {len(segments)} segments so far{_resource_meter("cpu")}",
                     flush=True,
                 )
+                if self._on_audio_progress is not None:
+                    self._on_audio_progress(audio_pos)
                 last_report = now
 
             # Feed VAD in WINDOW_SIZE chunks

@@ -65,11 +65,31 @@ class Reporter:
     IMAGE_PROGRESS_EVERY_PICS = 30  # emit a line every 30 finished images
     OCR_PROGRESS_EVERY_PAGES = 20   # emit a line every 20 OCR'd pages
 
-    def __init__(self):
+    def __init__(self, on_progress=None):
         self._lock = threading.Lock()
+        self._on_progress = on_progress
+        self.set_progress_context(0, 0)
         # sub_id -> (last_done_emitted_at_count, t0, last_print_t)
         self._image_progress_state: dict[str, dict] = {}
         self._ocr_progress_state: dict[str, dict] = {}
+
+    def set_progress_context(self, completed: int, total: int, *,
+                             course_id="", course_title="", sub_id="", sub_title=""):
+        """Only the main processing thread publishes structured stage changes."""
+        self._progress_context = {
+            "completed": completed, "total": total,
+            "course_id": course_id, "course_title": course_title,
+            "sub_id": sub_id, "sub_title": sub_title,
+        }
+
+    def progress(self, stage: str, detail: str, **updates):
+        if self._on_progress is not None:
+            self._on_progress({**self._progress_context, **updates,
+                               "stage": stage, "detail": detail})
+
+    def audio_progress(self, seconds: float):
+        minutes, remaining = divmod(int(seconds), 60)
+        self.progress("transcribe", f"已读取课堂音频 {minutes} 分 {remaining} 秒")
 
     # ── Lifecycle ────────────────────────────────────────────────────────
 

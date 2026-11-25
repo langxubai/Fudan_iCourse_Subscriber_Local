@@ -9,7 +9,8 @@ data/*
 !data/icourse.db.enc
 *.mp4
 *.wav
-tests/
+tests/*
+!tests/test_local_workflow.py
 temp/
 # ASR models (downloaded at runtime)
 sherpa-onnx-sense-voice-*/

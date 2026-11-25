@@ -14,6 +14,13 @@ to agree on what tables and columns exist.
 from __future__ import annotations
 
 
+# Local discovery, confirmation and execution must agree on eligibility.
+PENDING_LECTURE_SQL = """
+    trim(coalesce(summary, ''), char(9) || char(10) || char(13) || ' ') = '' AND
+    (processed_at IS NULL OR coalesce(error_stage, '') <> '')
+"""
+
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS courses (
     course_id TEXT PRIMARY KEY,

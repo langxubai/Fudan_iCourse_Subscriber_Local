@@ -119,9 +119,11 @@ class LectureRunner:
         self._schedule_next(next_info)
 
         # ── Phase D — ASR transcription ────────────────────────────────
+        self._reporter.progress("transcribe", "正在读取字幕或转写课堂音频")
         transcript, transcript_segments = self._get_transcript(
             existing, course_id, sub_id,
         )
+        self._reporter.progress("ocr", "正在识别课件文字")
         if transcript is None:
             # _get_transcript already logged + persisted the skip reason.
             # Still drain the PPT handle: with defer_ocr the OCR jobs are
@@ -153,6 +155,7 @@ class LectureRunner:
             self._db.clear_error(sub_id)
             return None
 
+        self._reporter.progress("summarize", "正在生成课程摘要")
         summary = self._summarize(
             sub_id, course_title, transcript, transcript_segments,
         )
@@ -175,10 +178,7 @@ class LectureRunner:
 
     @staticmethod
     def _has_summary(existing: dict | None) -> bool:
-        return bool(
-            existing
-            and existing.get("summary")
-        )
+        return bool(existing and (existing.get("summary") or "").strip())
 
     def prefetch_first(self, course_id: str, sub_id: str) -> None:
         """Prefetch for the first lecture in the batch — same decision
