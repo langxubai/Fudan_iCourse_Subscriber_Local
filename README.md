@@ -1,8 +1,64 @@
 # iCourse Subscriber V2
 
-自动监控复旦大学 iCourse 智慧教学平台的课程更新，对新课次的录播视频进行**语音转文字 + PPT OCR + AI 摘要**，并通过邮件推送到你的邮箱。
+在自己的 Mac 上订阅复旦 iCourse 课程，在浏览器里阅读每节课的摘要、转写和 PPT 文字。课程笔记和同步进度保存在本机的 SQLite 数据库里。
 
-部署在 GitHub Actions 上，每天定时运行，**零成本、免服务器、全自动**。
+## 在 Mac 上使用
+
+在项目根目录打开终端。先准备可在终端运行的 `ffmpeg`，以及 Python 3.12、Python 3.11 或 `uv` 中的任意一个。如果你使用 Homebrew，缺少哪些工具就安装哪些，例如 `brew install ffmpeg python@3.12`。
+
+第一次运行安装脚本。它把 Python 依赖装进项目的 `.venv`，准备 SenseVoice 语音识别和 Silero 语音检测模型，并在缺少 `.env` 时创建一份空白配置。首次安装需要联网，重跑会复用已有模型。如果只有 `uv`，脚本会在项目的 `.local-python` 中准备 Python 3.12。
+
+```sh
+bash scripts/setup_local.sh
+```
+
+用文本编辑器打开项目根目录的 `.env`，填写以下项目，保存后启动本地课程库。
+
+| 配置 | 填写内容 |
+|---|---|
+| `StuId`、`UISPsw` | 复旦学号和 UIS 密码，变量名区分大小写 |
+| `UIS_TOTP_SECRET` | UIS 动态口令绑定时取得的 Base32 密钥，六位验证码会由程序在登录时生成 |
+| `COURSE_IDS` | 可选的初始订阅，填写课程网址中的数字，多个用英文逗号分隔。也可以打开网页后添加 |
+| 模型服务密钥 | 按使用的服务填写 `DASHSCOPE_API_KEY`（ModelScope）、`DEEPSEEK_API_KEY` 或 `GEMINI_API_KEY` 中的至少一项 |
+
+也可以自行指定供应商，同时填写 `LLM_BASE_URL`（供应商给出的 API 基础地址，通常以 `/v1` 结尾）、`LLM_MODEL`（模型 ID）和 `LLM_API_KEY`。这时只向指定地址发送摘要请求，接口需兼容 OpenAI Chat Completions。账号和密钥由本机后台读取。保存这些配置后可直接在网页重新同步。
+
+在 Finder 中双击 `打开课程库.command`，或在终端运行：
+
+```sh
+.venv/bin/python local_app.py
+```
+
+浏览器会打开本地课程库，优先使用 `http://127.0.0.1:8765/`。如果该端口正忙，程序会自动选择可用端口并在终端显示网址。保存订阅后，点击同步即可在 Mac 上处理课次。首次同步会处理所选课程已有的录播，后续同步只处理新课次和待重试的课次。音频识别和 PPT 文字识别在本机执行，生成摘要时会将转写和提取的 PPT 文字发给配置的模型服务。课程材料仅供个人学习使用。
+
+课程数据默认保存在 `data/icourse.db`，同步日志在 `data/sync.log`。网页保存的订阅在 `data/subscriptions.json`，之后以这份清单为准。启动时如需自己打开浏览器，使用 `.venv/bin/python local_app.py --no-browser`。端口被占用时可以加 `--port 8766`。只同步一次可以直接运行下面的命令，完成后退出。
+
+```sh
+.venv/bin/python local_app.py sync
+```
+
+### 可选的 macOS 定时同步
+
+如果希望每天自动检查课程，先确认手动同步能成功，再在项目根目录运行以下命令。它们会为当前 macOS 用户注册一个任务，在本地时间 19:36 执行同步。定时运行时可以关闭课程网页。
+
+```sh
+mkdir -p "$HOME/Library/LaunchAgents" data
+agent="$HOME/Library/LaunchAgents/local.fudan.icourse.sync.plist"
+.venv/bin/python scripts/local_launchd.py > "$agent"
+launchctl bootstrap "gui/$(id -u)" "$agent"
+```
+
+日志保存在 `data/scheduled-sync.log`。定时任务使用项目的绝对路径，移动项目后需要重新生成配置。要停止并取消定时同步，可执行以下命令。
+
+```sh
+agent="$HOME/Library/LaunchAgents/local.fudan.icourse.sync.plist"
+launchctl bootout "gui/$(id -u)/local.fudan.icourse.sync"
+rm "$agent"
+```
+
+## 原版云端部署（GitHub Actions 与邮件）
+
+云端版通过 GitHub Actions 定时执行同一套课程处理流程，并通过邮件推送到你的邮箱。下面保留了该部署方式的配置说明。
 
 > [!NOTE]
 > 本项目严禁大规模传播（例如，不准分享到树洞、班级群、大群等地），否则信息办可能随时ban掉该项目。

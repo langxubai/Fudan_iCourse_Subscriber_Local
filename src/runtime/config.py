@@ -1,4 +1,6 @@
 import os
+from collections.abc import Mapping
+from urllib.parse import urlsplit
 
 STUDENT_ID = os.environ.get("StuId", "")
 PASSWORD = os.environ.get("UISPsw", "")
@@ -71,8 +73,8 @@ MODEL_PROVIDERS: list[dict] = [
 ]
 
 
-def resolve_model_providers() -> list[dict]:
-    """Resolve MODEL_PROVIDERS into runtime configs.
+def resolve_model_providers(env: Mapping[str, str] | None = None) -> list[dict]:
+    """Use an explicitly configured endpoint or resolve the built-in providers.
 
     Drops providers whose api_key env var is unset. Same-name entries get
     their model lists merged into the first occurrence (Summarizer's client
@@ -81,14 +83,35 @@ def resolve_model_providers() -> list[dict]:
     Returns:
         list of {name, api_key, base_url, models}.
     """
+    if env is None:
+        env = os.environ
+    custom = {
+        name: env.get(name, "").strip()
+        for name in ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL")
+    }
+    if any(custom.values()):
+        missing = [name for name, value in custom.items() if not value]
+        if missing:
+            raise ValueError(f"自选摘要模型配置缺少 {', '.join(missing)}。")
+        base_url = custom["LLM_BASE_URL"]
+        url = urlsplit(base_url)
+        if url.scheme not in ("http", "https") or not url.hostname:
+            raise ValueError("LLM_BASE_URL 需要填写包含 http:// 或 https:// 的服务地址。")
+        return [{
+            "name": "custom",
+            "api_key": custom["LLM_API_KEY"],
+            "base_url": base_url,
+            "models": [custom["LLM_MODEL"]],
+        }]
+
     resolved: list[dict] = []
     by_name: dict[str, dict] = {}
     for p in MODEL_PROVIDERS:
-        api_key = os.environ.get(p["api_key_env"], "").strip()
+        api_key = env.get(p["api_key_env"], "").strip()
         if not api_key:
             continue
         base_url = (
-            os.environ.get(p.get("base_url_env", ""), "").strip()
+            env.get(p.get("base_url_env", ""), "").strip()
             or p.get("default_base_url", "")
         )
         if not base_url:

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>iCourse · 本地课程笔记</title>
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/app.css">
+  <script defer src="/vendor/katex/katex.min.js"></script>
+  <script defer src="/vendor/katex/auto-render.min.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="book-mark" aria-hidden="true"></span><span>iCourse</span><span class="brand-divider"></span><span class="brand-caption">本地课程笔记</span></div>
+    <div class="actions">
+      <button type="button" id="edit-subs">管理订阅</button>
+      <button type="button" class="primary" id="sync" disabled>立即同步</button>
+    </div>
+  </header>
+  <div class="status-strip" role="status"><span class="status-light" aria-hidden="true"></span><span id="status">正在连接本地服务…</span></div>
+  <div class="workspace">
+    <aside aria-label="课程与课次">
+      <div class="section-label"><label for="courses">我的课程</label><span id="course-count"></span></div>
+      <select id="courses" disabled><option>加载中…</option></select>
+      <div class="section-label lecture-label"><span>课次目录</span><span id="lecture-count"></span></div>
+      <nav id="lectures" aria-label="选择课次"></nav>
+    </aside>
+    <main id="reader" aria-label="课程笔记">
+      <div id="placeholder" class="placeholder" aria-live="polite">
+        <div class="folio" aria-hidden="true"><i></i><i></i><i></i></div>
+        <h1 id="placeholder-title">正在打开课程笔记…</h1>
+        <p id="placeholder-description"></p>
+        <button id="placeholder-action" type="button" hidden></button>
+      </div>
+      <article id="note" hidden>
+        <header class="note-header">
+          <div class="note-course" id="course-title"></div>
+          <h1 id="lecture-title"></h1>
+          <div class="note-tools"><p id="lecture-byline"></p><a class="export" id="export" download>导出 Markdown <span aria-hidden="true">↓</span></a></div>
+        </header>
+        <div class="tabs" role="tablist" aria-label="笔记内容">
+          <button type="button" role="tab" data-view="summary" id="tab-summary" aria-controls="content" aria-selected="true">课堂摘要</button>
+          <button type="button" role="tab" data-view="transcript" id="tab-transcript" aria-controls="content" aria-selected="false" tabindex="-1">全文转录</button>
+          <button type="button" role="tab" data-view="pages" id="tab-pages" aria-controls="content" aria-selected="false" tabindex="-1">PPT 文字</button>
+        </div>
+        <section id="content" class="prose" role="tabpanel" tabindex="0" aria-labelledby="tab-summary"></section>
+      </article>
+    </main>
+  </div>
+  <dialog id="subscription-dialog" aria-labelledby="dialog-title">
+    <form id="subscriptions">
+      <div class="dialog-head"><h2 id="dialog-title">管理订阅</h2><button class="close" id="close-dialog" type="button" aria-label="关闭">×</button></div>
+      <label for="ids">订阅的课程 ID</label>
+      <p id="ids-hint">从 iCourse 课程网址复制数字 ID，每行一个，也可以用逗号分隔。移除订阅后，已保存的笔记仍可阅读。</p>
+      <textarea id="ids" rows="5" spellcheck="false" aria-describedby="ids-hint" placeholder="每行一个课程 ID"></textarea>
+      <p id="form-status" role="status"></p>
+      <div class="dialog-actions"><button id="cancel" type="button">取消</button><button class="primary" id="save" type="submit">保存订阅</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

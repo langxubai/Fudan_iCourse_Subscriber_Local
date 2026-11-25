@@ -1,6 +1,10 @@
 __pycache__/
 *.pyc
 .env
+.venv/
+.local-python/
+.icourse-setup.*/
+sherpa-onnx-sense-voice-*.tar.bz2
 data/*
 !data/icourse.db.enc
 *.mp4

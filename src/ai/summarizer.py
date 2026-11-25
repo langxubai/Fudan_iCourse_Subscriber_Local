@@ -1,4 +1,4 @@
-"""LLM-based course lecture summarization via ModelScope API."""
+"""Course lecture summarization using OpenAI-compatible chat completions."""
 
 import time
 
@@ -81,7 +81,8 @@ class Summarizer:
         if not self.providers:
             raise ValueError(
                 "No model provider available. "
-                "Set at least one provider's API key (e.g. DASHSCOPE_API_KEY)."
+                "Set LLM_BASE_URL, LLM_API_KEY and LLM_MODEL, "
+                "or a built-in provider's API key (e.g. DASHSCOPE_API_KEY)."
             )
         self._clients = {
             p["name"]: OpenAI(api_key=p["api_key"], base_url=p["base_url"])
@@ -108,6 +109,8 @@ class Summarizer:
         if not response.choices:
             raise ValueError("API returned empty choices — likely content filter or quota exceeded")
         result = response.choices[0].message.content
+        if not isinstance(result, str) or not result.strip():
+            raise ValueError("API returned no summary text")
         elapsed = time.time() - t0
         # Token usage helps explain run cost — every provider's billing is
         # token-based, and rate-limit decisions key off prompt size much
