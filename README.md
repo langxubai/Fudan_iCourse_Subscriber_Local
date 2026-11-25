@@ -1,4 +1,10 @@
-# iCourse Subscriber V2
+# iCourse Subscriber Local
+
+和原仓库 https://github.com/LeafCreeper/Fudan_iCourse_Subscriber 的区别：
+1. 除AI以外的后台服务完全在本地运行，不依赖 GitHub Actions和邮件，AI也可以选择本地Ollama运行；
+2. 支持在网页随时自行切换 LLM 模型服务商（支持在写入环境的多个API中选择，或者在网页直接添加新的API）；
+3. 支持选择需要解析的课次，未选中的课次不会被处理；
+4. 以及一些细节优化。
 
 在自己的 Mac 上订阅复旦 iCourse 课程，在浏览器里阅读每节课的摘要、转写和 PPT 文字。课程笔记和同步进度保存在本机的 SQLite 数据库里。
 
@@ -41,6 +47,53 @@ bash scripts/setup_local.sh
 ```sh
 .venv/bin/python local_app.py sync
 ```
+
+### 停止运行并释放端口
+
+**回到显示「本地课程库 http://…」的终端窗口，按 `Control + C`。** 双击 `打开课程库.command` 启动时，也在它打开的终端里按这组键。网页服务退出后会释放端口。只关闭浏览器标签页，服务仍会运行。
+
+**找不到原来的终端时**，新开一个终端，按浏览器地址里的实际端口查找进程。例如地址为 `http://127.0.0.1:55350/` 时，运行：
+
+```sh
+port=55350
+lsof -nP -iTCP:"$port" -sTCP:LISTEN
+```
+
+没有输出表示该端口已无程序监听。如果有输出，再核对启动命令和项目目录：
+
+```sh
+server_pid=$(lsof -nP -t -iTCP@127.0.0.1:"$port" -sTCP:LISTEN)
+ps -p "$server_pid" -o pid=,command=
+lsof -a -p "$server_pid" -d cwd
+```
+
+确认命令中有 `local_app.py`，且 `cwd` 是本项目目录，再停止服务并复查端口。最后一条命令没有输出即表示端口已释放。
+
+```sh
+kill -TERM "$server_pid"
+lsof -nP -iTCP:"$port" -sTCP:LISTEN
+```
+
+**如果还要中断正在检查或解析的课次**，网页发起的任务在独立进程中运行，关闭网页服务后仍会继续。要一并停止，在项目根目录查找持有同步锁的进程。下面使用默认数据库路径，自定义了 `DB_PATH` 时请在实际数据库文件名后加 `.sync.lock`。
+
+```sh
+lsof -n data/icourse.db.sync.lock
+```
+
+如果锁文件不存在或没有进程持有它，后台任务已停止。如果列出了 PID，先核对启动命令：
+
+```sh
+worker_pid=$(lsof -t data/icourse.db.sync.lock)
+ps -p "$worker_pid" -o pid=,command=
+```
+
+确认命令以本项目的 `local_app.py _worker` 结尾后，发送中断信号：
+
+```sh
+kill -INT "$worker_pid"
+```
+
+任务退出后，再查同步锁应无持有者。已入库的笔记会保留。若在终端前台运行的是 `.venv/bin/python local_app.py sync`，直接在该终端按 `Control + C` 即可。已启用每日自动检查的用户，可按下一节的步骤取消定时任务。
 
 ### 可选的 macOS 定时同步
 
